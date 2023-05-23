@@ -70,25 +70,39 @@ class Chesser:
             info = self.engine.analyse(
                 self.board, chess.engine.Limit(depth=20))
             size = shutil.get_terminal_size((80, 20))
-            score = sigmoid(info["score"].pov(self.board.turn).score)
+            try:
+                score = sigmoid(info["score"].pov(
+                    self.board.turn).score() / 100)
+            except:
+                print("ERR")
+                score = 0
+            width = round(size.columns*score)
 
-            width = size.columns*score
-
-            center = int(size.columns / 2)
+            print(
+                f"[blue]{'#'*width}[/blue][yellow]{'#'*(size.columns-width)}[/yellow]")
+            print(score)
 
             # print("[green]" + "#"*width + "[/green]" + "")
 
     def convert_move(self, a, b):
-        if self.board.color_at(chess.parse_square(f"{NUM_TO_LETTER[a[0]]}{7-a[1]+1}")) == self.board.turn:
-            return f"{NUM_TO_LETTER[a[0]]}{7-a[1]+1}{NUM_TO_LETTER[b[0]]}{7-b[1]+1}"
+        if self.board.color_at(chess.square(
+                a[0], 7-a[1])) == self.board.turn:
+            return chess.Move(chess.square(
+                a[0], 7-a[1]), chess.square(b[0], 7-b[1])).uci()
         else:
-            return f"{NUM_TO_LETTER[b[0]]}{7-b[1]+1}{NUM_TO_LETTER[a[0]]}{7-a[1]+1}"
+            return chess.Move(chess.square(
+                b[0], 7-b[1]), chess.square(a[0], 7-a[1])).uci()
+
+        # if self.board.color_at(chess.parse_square(f"{NUM_TO_LETTER[a[0]]}{7-a[1]+1}")) == self.board.turn:
+        #     return f"{NUM_TO_LETTER[a[0]]}{7-a[1]+1}{NUM_TO_LETTER[b[0]]}{7-b[1]+1}"
+        # else:
+        #     return f"{NUM_TO_LETTER[b[0]]}{7-b[1]+1}{NUM_TO_LETTER[a[0]]}{7-a[1]+1}"
 
     def mainloop(self):
         out("Welkom bij chesser!")
 
         while True:
-            # self.print_status()
+            self.print_status()
             if self.board.is_game_over():
                 out("Game over...")
                 exit()

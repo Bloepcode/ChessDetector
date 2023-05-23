@@ -19,7 +19,7 @@ def click(event, x, y, flags, param):
 def get_points():
     global clicked, mouseX, mouseY
     # Get the camera
-    cap = cv2.VideoCapture(0)
+    cap = cv2.VideoCapture("http://192.168.1.177:8080/video")
     if not cap.isOpened():
         print("Cannot open camera")
         exit()
@@ -44,12 +44,55 @@ def get_points():
     return points
 
 
-def calibrate():
+def get_minimum_change(config, iterations):
+    hard_moves = [("a1a3", ((0, 7-0), (0, 7-2))),
+                  ("h1h3", ((7, 7-0), (7, 7-2))), ("a8a6", ((0, 7), (0, 5))), ("h8h6", ((7, 7), (7, 5)))]
+    current_max = 0
+    for move in hard_moves:
+        print(f"New move out of 4")
+        for i in range(iterations):
+            print(f"Iteration {i+1} out of {iterations}")
+            reader = Reader(config)
+            reader.match_with_previous()
+            reader.submit_previous()
+            out(f"Doe zet {move[0]}")
+            input("Press enter to continue...")
+            results = reader.match_with_previous()
+            reader.submit_previous()
+            print(results)
+            for set in range(2):
+                for result in results:
+                    if result[0] == move[1][set][0] and result[1] == move[1][set][1]:
+                        if result[2] > current_max:
+                            current_max = result[2]
+                            print("NEw current max", current_max)
+                        break
+
+            out("Reset het bord.")
+            input("Press enter to continue...")
+            results = reader.match_with_previous()
+            reader.submit_previous()
+            for set in range(2):
+                for result in results:
+                    if result[0] == move[1][set][0] and results[1] == move[1][set][1]:
+                        if result[2] > current_max:
+                            current_max = result[2]
+                            print("NEw current max", current_max)
+                        break
+            config.minimum_change = current_max
+    return current_max * 1.1
+
+
+def calibrate() -> Config:
     global clicked, mouseX, mouseY
     clicked = False
     mouseX = 0
     mouseY = 0
-    return get_points()
+
+    points = get_points()
+
+    config = Config(points, 0, 15, (256, 256))
+    print(get_minimum_change(config, 3))
 
 
 print(">>> [green on black]ChessDetector[/green on black] <<<")
@@ -61,9 +104,9 @@ if os.path.exists("config.tpl"):
         config = pickle.load(f)
         print(config.positions)
 else:
-    config = Config(calibrate(), 0.8, (256, 256))
-    with open("config.tpl", "wb") as f:
-        pickle.dump(config, f)
+    # with open("config.tpl", "wb") as f:
+    config = calibrate()
+    # pickle.dump(config, f)
 
 
 # while True:

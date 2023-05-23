@@ -5,7 +5,7 @@ from dataclass import Config
 from rich import print
 
 
-THRESH = 2
+THRESH = 3
 
 NUMS = []
 for x in range(8):
@@ -32,9 +32,24 @@ class Square:
             The square to compare to the previous square
         """
 
-        errorL2 = cv2.norm(self.prev, next, cv2.NORM_L2)
+        errorL2 = cv2.norm(
+            self.prev,
+            next, cv2.NORM_L2)
 
         return (errorL2 / (next.shape[0] * next.shape[0]))
+        # print(next.shape)
+        # next, prev = cv2.cvtColor(next, cv2.COLOR_BGR2GRAY), cv2.cvtColor(self.prev, cv2
+        #                                                                   .COLOR_GRAY2BGR)
+
+        # diff_frame = cv2.absdiff(src1=next, src2=prev)
+
+        # kernel = np.ones((5, 5))
+
+        # diff_frame = cv2.dilate(diff_frame, kernel, 1)
+
+        # thresh_frame = cv2.threshold(
+        #     src=diff_frame, thresh=3, maxval=255, type=cv2.THRESH_BINARY)[1]
+        # return thresh_frame.mean(axis=0).mean(axis=0)
 
         # diff_frame = cv2.absdiff(src1=next, src2=self.prev)
 
@@ -58,7 +73,7 @@ class Reader:
             self.config.process_image_size[0])
 
         # Get the camera
-        self.cap = cv2.VideoCapture(0)
+        self.cap = cv2.VideoCapture("http://192.168.1.177:8080/video")
         if not self.cap.isOpened():
             print("Cannot open camera")
             exit()
@@ -175,24 +190,23 @@ class Reader:
                 _, frame = self.cap.read()
                 sim = self.match_self(prev, frame)
                 prev = frame
-                if sim < 30:
+                if sim < self.config.sim_for_stills:
                     stills += 1
                 else:
                     stills = 0
 
-                if stills >= 8:
+                if stills >= 5:
                     break
             print("[green]NEW")
             for _ in range(5):
                 print("[cyan]Matching now...")
                 matches = self.match_with_previous()
                 print(f"[cyan]Done matching, results: [blue]{matches}[/blue]!")
-                if matches[0][2] > THRESH and matches[1][2] > THRESH:
+                if matches[0][2] > self.config.minimum_change and matches[1][2] > self.config.minimum_change:
                     matched += 1
-                if matches[4][2] > THRESH or matches[5][2] > THRESH:
-                    matched = 0
-                    break
-            # print(matched)
+                # if matches[4][2] > THRESH or matches[5][2] > THRESH:
+                #     matched -= 1
+            print(matched)
             if matched == 5:
                 matches = self.match_with_previous()
                 if matches[0][2] > THRESH and matches[1][2] > THRESH:
@@ -250,7 +264,8 @@ class Reader:
                 results.append(
                     (7-x, 7-y, self.squares[x][y].match(boxes[x][y].copy())))
 
-        return sorted(results, reverse=True,  key=lambda x: x[2])[:6]
+        return sorted(results, reverse=True,  key=lambda x: x[2])
+        # return sorted(results,  key=lambda x: x[2])
 
     def submit_previous(self):
         _, frame = self.cap.read()
